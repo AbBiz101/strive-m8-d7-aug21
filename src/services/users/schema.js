@@ -6,7 +6,7 @@ const { Schema, model } = mongoose
 const UserSchema = new Schema({
   name: { type: String, required: true },
   surname: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: "User", enum: ["User", "Admin"] },
 })
@@ -34,5 +34,26 @@ UserSchema.methods.toJSON = function () {
 
   return userObject
 }
+
+UserSchema.statics.checkCredentials = async function (email, plainPw) {
+  // 1. find the user by email
+  const user = await this.findOne({ email }) // "this" refers to the UserModel
+
+  if (user) {
+    // 2. if user its found --> compare plainPw with hashed one
+    const isMatch = await bcrypt.compare(plainPw, user.password)
+    if (isMatch) {
+      // 3. if they match --> return a proper response
+      return user
+    } else {
+      // 4. if they don't --> return null
+      return null
+    }
+  } else {
+    return null // also if email is not ok --> return null
+  }
+}
+
+// usage --> await UserModel.checkCredentials("asd@asd.com", "mypw")
 
 export default model("User", UserSchema)
